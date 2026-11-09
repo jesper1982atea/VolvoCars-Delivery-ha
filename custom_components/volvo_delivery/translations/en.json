@@ -1,0 +1,44 @@
+{
+  "title": "Volvo Delivery",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Track a Volvo delivery",
+        "description": "Enter your Swedish order number and the Bearer token from the Authorization request header used by Volvo's delivery page. See the integration documentation for instructions.",
+        "data": {
+          "order_number": "Order number",
+          "authorization": "Authorization (Bearer token)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update Volvo authorization",
+        "description": "Volvo rejected the saved authorization. Copy a new Authorization value from the delivery page.",
+        "data": {
+          "authorization": "Authorization (Bearer token)"
+        }
+      }
+    },
+    "error": {
+      "invalid_order": "The order number must contain seven or eight digits.",
+      "invalid_auth": "The authorization value is invalid or has expired.",
+      "order_not_found": "The order was not found. Check the number and that delivery information is available on Volvo's site.",
+      "cannot_connect": "Could not read delivery information. Try again later."
+    },
+    "abort": {
+      "already_configured": "This order is already configured.",
+      "reauth_successful": "Authorization updated."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {"name": "Delivery status"},
+      "delivery_estimate": {"name": "Estimated delivery"},
+      "order_changes": {"name": "Order changes"},
+      "delivery_start": {"name": "Estimated delivery week start"},
+      "delivery_end": {"name": "Estimated delivery week end"},
+      "days_until_delivery": {"name": "Days until delivery week"},
+      "last_changed": {"name": "Last delivery change"},
+      "last_checked": {"name": "Last successful check"}
+    }
+  }
+}

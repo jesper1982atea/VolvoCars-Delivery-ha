@@ -1,0 +1,16 @@
+{
+  "name": "volvo-delivery-card",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node tests/frontend/preview-server.js",
+    "test": "node --test tests/frontend/*.test.js",
+    "format": "prettier --write custom_components/volvo_delivery/frontend/*.js tests/frontend/*.js",
+    "format:check": "prettier --check custom_components/volvo_delivery/frontend/*.js tests/frontend/*.js"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.0.0",
+    "prettier": "^3.0.0"
+  }
+}

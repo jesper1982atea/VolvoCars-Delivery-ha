@@ -1,0 +1,13 @@
+{
+  "domain": "volvo_delivery",
+  "name": "Volvo Delivery",
+  "codeowners": ["@jesper1982atea"],
+  "config_flow": true,
+  "dependencies": ["frontend"],
+  "documentation": "https://github.com/jesper1982atea/VolvoCars-Delivery-ha",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/jesper1982atea/VolvoCars-Delivery-ha/issues",
+  "requirements": [],
+  "version": "0.3.0"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Volvo Delivery",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Följ en Volvoleverans",
+        "description": "Ange ditt svenska ordernummer och Bearer-värdet från Authorization-headern som Volvos leveranssida använder. Se integrationens dokumentation för instruktioner.",
+        "data": {
+          "order_number": "Ordernummer",
+          "authorization": "Authorization (Bearer-värde)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Uppdatera Volvos behörighet",
+        "description": "Volvo nekade det sparade behörighetsvärdet. Kopiera ett nytt Authorization-värde från leveranssidan.",
+        "data": {
+          "authorization": "Authorization (Bearer-värde)"
+        }
+      }
+    },
+    "error": {
+      "invalid_order": "Ordernumret måste bestå av sju eller åtta siffror.",
+      "invalid_auth": "Behörighetsvärdet är ogiltigt eller har gått ut.",
+      "order_not_found": "Ordern hittades inte. Kontrollera numret och att leveransinformation finns på Volvos sida.",
+      "cannot_connect": "Kunde inte läsa leveransinformationen. Försök igen senare."
+    },
+    "abort": {
+      "already_configured": "Ordern är redan konfigurerad.",
+      "reauth_successful": "Behörigheten har uppdaterats."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {"name": "Leveransstatus"},
+      "delivery_estimate": {"name": "Beräknad leverans"},
+      "order_changes": {"name": "Orderändringar"},
+      "delivery_start": {"name": "Beräknad leveransvecka börjar"},
+      "delivery_end": {"name": "Beräknad leveransvecka slutar"},
+      "days_until_delivery": {"name": "Dagar till leveransveckan"},
+      "last_changed": {"name": "Senaste leveransändring"},
+      "last_checked": {"name": "Senaste lyckade kontroll"}
+    }
+  }
+}
