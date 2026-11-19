@@ -239,12 +239,27 @@ test("editor registers with HA and emits config changes safely", () => {
   assert.equal(config.type, "custom:volvo-delivery-card");
 });
 
-test("connected card updates countdown and removes its timer when detached", (t) => {
-  const element = card(t);
+test("countdown changes at local midnight without redrawing the car", (t) => {
+  t.mock.timers.enable({
+    apis: ["Date", "setInterval"],
+    now: new Date("2026-11-09T22:58:00Z"),
+  });
+  const element = document.createElement("volvo-delivery-card");
+  element.setConfig({ status_entity: "sensor.my_renamed_status" });
+  element.hass = withVehicleMedia();
   element.connectedCallback();
-  assert.ok(element._timer);
+  const vehicle = t.mock.method(element, "_vehicle");
+  const number = element.shadowRoot.querySelector(".number");
+  const originalText = number.firstChild;
+  t.mock.timers.tick(60000);
+  assert.equal(number.firstChild, originalText);
+  assert.equal(number.textContent, "84");
+  t.mock.timers.tick(60000);
+  assert.equal(number.textContent, "83");
+  assert.equal(vehicle.mock.callCount(), 0);
   element.disconnectedCallback();
-  assert.equal(element._timer, null);
+  t.mock.timers.tick(86400000);
+  assert.equal(number.textContent, "83");
 });
 
 test("editor preserves unsaved input when unrelated HA states change", () => {
@@ -272,6 +287,33 @@ function withVehicleMedia() {
   });
   return data;
 }
+
+test("unrelated HA updates leave the card alone but new status is shown", (t) => {
+  const data = withVehicleMedia();
+  const element = card(t, undefined, data);
+  const vehicle = t.mock.method(element, "_vehicle");
+  const image = element.shadowRoot.querySelector(".main-image");
+  const setAttribute = t.mock.method(image, "setAttribute");
+  const id = "sensor.my_renamed_status";
+  element.hass = {
+    ...data,
+    states: { ...data.states, "light.other": state("light", "on") },
+  };
+  assert.equal(vehicle.mock.callCount(), 0);
+  element.hass = {
+    ...data,
+    states: {
+      ...data.states,
+      [id]: {
+        ...data.states[id],
+        state: "Din bil är på väg till din Volvohandlare.",
+      },
+    },
+  };
+  assert.match(text(element, ".status-text"), /på väg/);
+  assert.equal(image.getAttribute("src"), data.states[id].attributes.image_url);
+  assert.equal(setAttribute.mock.callCount(), 0);
+});
 
 test("uses Volvo image URLs and configuration without exposing credentials", (t) => {
   const data = withVehicleMedia();

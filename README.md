@@ -40,7 +40,8 @@ Se till att orderns leveranssensor är aktiverad.
 
 ### Bilbilder och konfiguration
 
-Kortet visar bilbilden från Volvos leveranssvar, när en bildlänk finns.
+Kortet visar bilbilden från Volvos leveranssvar i ett kompakt format, när en
+bildlänk finns. Fler bilder kan öppnas under bilens konfiguration.
 Under **Din bil · konfiguration och bilder** visas:
 
 - Volvos kompletta konfigurationstext, exempelvis modell, utrustningsnivå,
@@ -90,8 +91,10 @@ Det beräknade året förankras när Volvos leveransuppskattning ändras och spa
 Om årtal eller veckoprognos saknas, eller uppgifterna är tvetydiga, visas
 Volvos originaltext utan en påhittad nedräkning.
 
-Kortet räknar kalenderdagar i Home Assistants tidszon och uppdaterar nedräkningen
-ungefär varje minut medan det är aktivt. Detta gör inga extra anrop till Volvo.
+Kortet räknar kalenderdagar i Home Assistants tidszon. Medan det är aktivt
+kontrollerar det datumet varje minut och uppdaterar nedräkningen vid ett
+dygnsskifte utan att ladda om sidan eller bilbilden. Detta gör inga extra
+anrop till Volvo.
 Sensorn för antal dagar uppdateras vid integrationens dagliga hämtning.
 
 ## Hämta Authorization-värdet

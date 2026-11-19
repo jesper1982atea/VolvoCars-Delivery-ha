@@ -63,16 +63,15 @@ function todayInZone(now, timeZone) {
   return calendarDay(`${part("year")}-${part("month")}-${part("day")}`);
 }
 
-function forecastView(entity, now, timeZone) {
+function forecastView(entity, day) {
   if (!isAvailable(entity)) return null;
   const { estimated_start: startText, estimated_end: endText } =
     entity.attributes;
   const start = calendarDay(startText);
   const end = calendarDay(endText);
   if (!start || !end || (end - start) / 86400000 !== 6) return null;
-  const today = todayInZone(now, timeZone);
-  const days = Math.round((start - today) / 86400000);
-  const endDays = Math.round((end - today) / 86400000);
+  const days = Math.round((start - day) / 86400000);
+  const endDays = Math.round((end - day) / 86400000);
   const format = (date) =>
     new Intl.DateTimeFormat("sv-SE", {
       day: "numeric",
@@ -140,9 +139,9 @@ const STYLES = `
   h1 { font-family: Georgia, serif; font-size: clamp(29px, 8cqi, 42px); line-height: 1.15; font-weight: 400; margin: 24px 0 10px; letter-spacing: -.025em; max-width: 290px; }
   .subtitle { margin: 0; font-size: 12px; color: #bed4ce; line-height: 1.6; max-width: 330px; }
   .scene { display: block; width: calc(100% + 56px); height: 128px; margin: 8px -28px 0; }
-  .vehicle-photo { margin: 22px -28px 0; background: #f4f5f2; color: #233e3b; }
-  .vehicle-photo img { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: contain; }
-  .vehicle-photo figcaption { text-align: center; padding: 0 16px 10px; font-size: 10px; color: #586d67; }
+  .vehicle-photo { max-width: 320px; margin: 16px auto 18px; border-radius: 12px; overflow: hidden; background: #f4f5f2; color: #233e3b; }
+  .vehicle-photo img { display: block; width: 100%; aspect-ratio: 2 / 1; max-height: 144px; object-fit: contain; }
+  .vehicle-photo figcaption { text-align: center; padding: 6px 12px 8px; font-size: 10px; color: #586d67; }
   .image-notice { font-size: 11px; line-height: 1.6; margin: 12px 0; color: #bed4ce; }
   .body { padding: 24px 28px; }
   .countdown { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -187,7 +186,7 @@ const STYLES = `
   .refresh:disabled { opacity: .4; cursor: default; }
   .notice { margin: 0 0 20px; font-size: 12px; line-height: 1.6; padding: 12px 14px; border: 1px solid var(--warning-color, #c8933e); border-radius: 12px; }
   .action-error { color: var(--error-color, #bc4444); margin: 12px 0 0; font-size: 12px; }
-  @container (max-width: 340px) { .hero { padding: 22px 20px 0; } .body { padding: 22px 20px; } .scene { width: calc(100% + 40px); margin-inline: -20px; } .vehicle-photo { margin-inline: -20px; } .week-number { font-size: 18px; } }
+  @container (max-width: 340px) { .hero { padding: 22px 20px 0; } .body { padding: 22px 20px; } .scene { width: calc(100% + 40px); margin-inline: -20px; } .week-number { font-size: 18px; } }
 `;
 
 const TEMPLATE = `
@@ -319,12 +318,13 @@ class VolvoDeliveryCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    this._render(false);
   }
 
   connectedCallback() {
-    if (!this._timer) this._timer = setInterval(() => this._render(), 60000);
-    this._render();
+    if (!this._timer)
+      this._timer = setInterval(() => this._render(false), 60000);
+    this._render(false);
   }
 
   disconnectedCallback() {
@@ -341,7 +341,9 @@ class VolvoDeliveryCard extends HTMLElement {
   }
 
   _text(selector, value) {
-    this.shadowRoot.querySelector(selector).textContent = String(value ?? "");
+    const node = this.shadowRoot.querySelector(selector);
+    const text = String(value ?? "");
+    if (node.textContent !== text) node.textContent = text;
   }
 
   _timestamp(entity) {
@@ -361,7 +363,7 @@ class VolvoDeliveryCard extends HTMLElement {
     const visible = Boolean(url && !this._failedImages.has(url));
     image.hidden = !visible;
     image.parentElement.hidden = !visible;
-    image.alt = alt;
+    if (image.alt !== alt) image.alt = alt;
     if (visible && image.getAttribute("src") !== url) {
       image.setAttribute("src", url);
     } else if (!visible) {
@@ -382,9 +384,12 @@ class VolvoDeliveryCard extends HTMLElement {
       .toggleAttribute("hidden", mainVisible);
     const imageNotice = this.shadowRoot.querySelector(".image-notice");
     imageNotice.hidden = mainVisible;
-    imageNotice.textContent = attributes.image_url
-      ? "Volvos bilbild kunde inte visas. En generell illustration visas i stället."
-      : "Volvo har inte skickat någon bilbild. Illustrationen är generell.";
+    this._text(
+      ".image-notice",
+      attributes.image_url
+        ? "Volvos bilbild kunde inte visas. En generell illustration visas i stället."
+        : "Volvo har inte skickat någon bilbild. Illustrationen är generell.",
+    );
     const rear = this._image(
       ".rear-image",
       attributes.rear_image_url,
@@ -414,7 +419,7 @@ class VolvoDeliveryCard extends HTMLElement {
       const url = volvoUrl(value);
       link.hidden = !url;
       if (url) {
-        link.href = url;
+        if (link.getAttribute("href") !== url) link.href = url;
         hasLink = true;
       } else {
         link.removeAttribute("href");
@@ -432,21 +437,33 @@ class VolvoDeliveryCard extends HTMLElement {
     );
   }
 
-  _render() {
+  _render(force = true) {
     if (!this._config || !this._hass) return;
     const entities = resolveEntities(this._hass, this._config);
+    const timeZone = this._hass.config?.time_zone || "Europe/Stockholm";
+    const now = new Date();
+    const day = todayInZone(now, timeZone).getTime();
+    if (
+      !force &&
+      this._renderedTimeZone === timeZone &&
+      this._renderedDay === day &&
+      Object.entries(entities).every(
+        ([key, { id, entity }]) =>
+          this._entities[key].id === id &&
+          this._entities[key].entity === entity,
+      )
+    )
+      return;
+    this._renderedTimeZone = timeZone;
+    this._renderedDay = day;
+    const vehicleChanged =
+      this._entities?.status_entity.entity !== entities.status_entity.entity;
     this._entities = entities;
     const status = entities.status_entity.entity;
-    this._vehicle(status);
+    if (force || vehicleChanged) this._vehicle(status);
     const estimate = entities.delivery_entity.entity;
     const available = isAvailable(status) && isAvailable(estimate);
-    const forecast = available
-      ? forecastView(
-          estimate,
-          new Date(),
-          this._hass.config?.time_zone || "Europe/Stockholm",
-        )
-      : null;
+    const forecast = available ? forecastView(estimate, day) : null;
     const delivered =
       isAvailable(status) && stageIndex(entityText(status)) === 3;
     const model = status?.attributes.model || "Din Volvo";
@@ -464,11 +481,14 @@ class VolvoDeliveryCard extends HTMLElement {
     );
     const notice = this.shadowRoot.querySelector(".notice");
     notice.hidden = available;
-    notice.textContent = !status
-      ? "Statussensorn hittades inte. Välj din Volvo Delivery-sensor i kortets inställningar."
-      : !isAvailable(status)
-        ? "Leveransuppgifterna är inte tillgängliga. Kontrollera integrationens anslutning och behörighet."
-        : "Leveransprognosen är inte tillgänglig. Kontrollera att leveranssensorn är aktiverad.";
+    this._text(
+      ".notice",
+      !status
+        ? "Statussensorn hittades inte. Välj din Volvo Delivery-sensor i kortets inställningar."
+        : !isAvailable(status)
+          ? "Leveransuppgifterna är inte tillgängliga. Kontrollera integrationens anslutning och behörighet."
+          : "Leveransprognosen är inte tillgänglig. Kontrollera att leveranssensorn är aktiverad.",
+    );
     this._text(
       ".number",
       delivered || !forecast || forecast.phase === "past" ? "–" : forecast.days,
