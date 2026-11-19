@@ -1,6 +1,6 @@
 [project]
 name = "volvo-delivery"
-version = "0.3.0"
+version = "0.3.1"
 description = "Volvo delivery tracking for Home Assistant"
 requires-python = ">=3.13"
 

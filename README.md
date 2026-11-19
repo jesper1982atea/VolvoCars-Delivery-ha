@@ -18,6 +18,8 @@ Kortet ingår i samma installation; inget separat frontend-repo behövs.
 Välj den senaste publicerade versionen. Kortet uppdateras tillsammans med
 integrationen; efter en uppdatering kan webbläsaren eller mobilappen behöva
 laddas om för att läsa det nya kortet.
+Om kortet tidigare registrerades manuellt som en instrumentpanelsresurs,
+uppdatera den befintliga URL:en till `/volvo_delivery/volvo-delivery-card.js?v=0.3.1`.
 
 Öppna **Inställningar → Enheter och tjänster → Lägg till integration → Volvo
 Delivery**. Ange ditt ordernummer (sju eller åtta siffror) och Authorization-värdet
