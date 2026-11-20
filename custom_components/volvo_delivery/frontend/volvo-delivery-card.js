@@ -169,6 +169,38 @@ const STYLES = `
   .timeline li.complete::after, .timeline li.complete::before { background: #719c80; }
   .timeline li[aria-current="step"] { color: var(--primary-text-color, #172c2d); font-weight: 600; }
   .timeline li[aria-current="step"]::after { background: #abc98e; box-shadow: 0 0 0 4px #abc98e33; }
+  .insights { border-top: 1px solid var(--divider-color, #e0e6df); padding: 22px 0; }
+  .insights-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+  .insights-heading h2 { font-size: 15px; margin: 0; font-weight: 600; }
+  .insights-kicker { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--secondary-text-color, #617270); margin: 0 0 6px; }
+  .insights-badge { border-radius: 20px; background: #e8f1e5; color: #295943; padding: 6px 9px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .insights-badge.changed { background: #fbf0d7; color: #775415; }
+  .insights-caption { margin: 8px 0 16px; }
+  .insight-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .insight-stat { padding: 12px; border-radius: 12px; background: var(--secondary-background-color, #f3f5f0); min-width: 0; }
+  .insight-stat strong { display: block; font-size: 21px; font-weight: 500; margin: 4px 0; }
+  .insight-stat span { display: block; font-size: 10px; line-height: 1.4; color: var(--secondary-text-color, #617270); }
+  .insight-panel { margin-top: 14px; padding: 14px; border: 1px solid var(--divider-color, #e0e6df); border-radius: 14px; }
+  .insight-panel h3 { font-size: 12px; margin: 0 0 4px; font-weight: 600; }
+  .insight-panel p { margin: 0; font-size: 10px; }
+  .forecast-graph { width: 100%; height: auto; margin: 12px 0 2px; display: block; overflow: visible; }
+  .forecast-graph text { font-size: 9px; fill: var(--secondary-text-color, #617270); font-family: inherit; }
+  .forecast-graph line { stroke: var(--divider-color, #e0e6df); stroke-width: 1; }
+  .forecast-graph polyline { fill: none; stroke: #4a8069; stroke-width: 3; stroke-linejoin: round; }
+  .forecast-graph circle { fill: #4a8069; stroke: var(--card-background-color, white); stroke-width: 2; }
+  .activity-bars { display: grid; gap: 9px; margin-top: 14px; }
+  .activity-row { display: grid; grid-template-columns: 90px 1fr 20px; align-items: center; gap: 8px; font-size: 11px; }
+  .activity-track { height: 7px; background: var(--secondary-background-color, #eef2ea); border-radius: 10px; overflow: hidden; }
+  .activity-fill { height: 100%; border-radius: inherit; background: #719c80; }
+  .activity-count { text-align: right; font-variant-numeric: tabular-nums; }
+  .history-list { list-style: none; margin: 0; padding: 0; }
+  .history-list li { padding: 12px 0; border-top: 1px solid var(--divider-color, #e0e6df); }
+  .history-list li:first-child { border-top: 0; }
+  .history-list time { display: block; font-size: 10px; color: var(--secondary-text-color, #617270); margin-bottom: 5px; }
+  .history-list strong { font-size: 11px; display: block; margin-top: 6px; }
+  .history-list p { font-size: 11px; line-height: 1.5; margin: 3px 0 0; overflow-wrap: anywhere; }
+  .history-list .before { color: var(--secondary-text-color, #617270); }
+  .history-empty { padding: 14px 0 0; font-size: 11px; line-height: 1.6; color: var(--secondary-text-color, #617270); }
   details { border-top: 1px solid var(--divider-color, #e0e6df); padding: 16px 0; }
   summary { cursor: pointer; font-size: 12px; line-height: 1.6; }
   .changes-text { white-space: pre-line; }
@@ -232,6 +264,34 @@ const TEMPLATE = `
       <ol class="timeline" aria-label="Leveranssteg">
         <li>Beställd</li><li>Byggd</li><li>På väg</li><li>Levererad</li>
       </ol>
+      <section class="insights" aria-label="Leveranshistorik och statistik">
+        <div class="insights-heading">
+          <div><p class="insights-kicker">Din leverans över tid</p><h2>Ändringar &amp; prognos</h2></div>
+          <span class="insights-badge"></span>
+        </div>
+        <p class="muted insights-caption"></p>
+        <div class="insight-stats">
+          <div class="insight-stat"><span>REGISTRERADE ÄNDRINGAR</span><strong class="insight-total">–</strong><span>sedan historiken började</span></div>
+          <div class="insight-stat"><span>SENASTE PROGNOSSKIFTE</span><strong class="insight-shift">–</strong><span class="insight-shift-note">jämförda leveransveckor</span></div>
+        </div>
+        <div class="insight-panel">
+          <h3>Leveransprognos över tid</h3>
+          <p class="muted">Veckans start vid varje prognosskifte. Punkterna visas i ordning med jämnt avstånd.</p>
+          <svg class="forecast-graph" viewBox="0 0 300 130" role="img" aria-label="Tidigare och aktuell prognos för leveransveckans start" hidden></svg>
+          <div class="history-empty graph-empty"></div>
+        </div>
+        <div class="insight-panel">
+          <h3>Vad har ändrats?</h3>
+          <p class="muted activity-caption"></p>
+          <div class="activity-bars"></div>
+        </div>
+        <div class="insight-panel">
+          <h3>Senaste ändringarna</h3>
+          <p class="muted history-caption"></p>
+          <ol class="history-list"></ol>
+          <div class="history-empty list-empty"></div>
+        </div>
+      </section>
       <details class="vehicle-details" hidden>
         <summary>Din bil · konfiguration och bilder</summary>
         <p class="vehicle-specification"></p>
@@ -437,6 +497,228 @@ class VolvoDeliveryCard extends HTMLElement {
     );
   }
 
+  _history(status) {
+    const attrs = isAvailable(status) ? status.attributes : {};
+    const history = Array.isArray(attrs.change_history)
+      ? attrs.change_history.filter(
+          (item) =>
+            item &&
+            Array.isArray(item.changes) &&
+            !Number.isNaN(Date.parse(item.at)),
+        )
+      : [];
+    const events = history.filter(
+      (item) => !item.baseline && item.changes.length,
+    );
+    const total =
+      Number.isSafeInteger(attrs.history_total) && attrs.history_total >= 0
+        ? attrs.history_total
+        : null;
+    const started = Date.parse(attrs.history_started);
+    const formatDate = (value) =>
+      new Intl.DateTimeFormat("sv-SE", {
+        dateStyle: "medium",
+        timeZone: this._hass.config?.time_zone || "Europe/Stockholm",
+      }).format(new Date(value));
+    const formatDay = (day) =>
+      new Intl.DateTimeFormat("sv-SE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(day);
+    const startedText = Number.isNaN(started) ? null : formatDate(started);
+    const badge = this.shadowRoot.querySelector(".insights-badge");
+    badge.classList.toggle("changed", Boolean(total));
+    this._text(
+      ".insights-badge",
+      total === null
+        ? "Ingen historik"
+        : total
+          ? "Ändringar finns"
+          : "Inga ändringar",
+    );
+    this._text(
+      ".insights-caption",
+      startedText
+        ? `Registreras sedan ${startedText}. Äldre ändringar finns inte med.`
+        : "Historik börjar samlas när integrationen uppdateras. Äldre ändringar finns inte med.",
+    );
+    this._text(".insight-total", total === null ? "–" : total);
+
+    const points = [];
+    for (const item of history) {
+      const forecast = calendarDay(item.forecast_start);
+      if (!forecast) continue;
+      if (
+        points.length &&
+        points[points.length - 1].forecast.getTime() === forecast.getTime()
+      )
+        continue;
+      points.push({ forecast, at: item.at });
+    }
+    let shift = null;
+    for (let i = history.length - 1; i > 0; i--) {
+      const previous = calendarDay(history[i - 1].forecast_start);
+      const current = calendarDay(history[i].forecast_start);
+      if (!previous || !current) continue;
+      const delta = Math.round((current - previous) / 86400000);
+      if (delta) {
+        shift = delta;
+        break;
+      }
+    }
+    this._text(
+      ".insight-shift",
+      shift === null ? "–" : `${shift > 0 ? "+" : "−"}${Math.abs(shift)} d`,
+    );
+    this._text(
+      ".insight-shift-note",
+      shift === null
+        ? "inget jämförbart skifte ännu"
+        : shift > 0
+          ? "senare än förra prognosen"
+          : "tidigare än förra prognosen",
+    );
+
+    const svg = this.shadowRoot.querySelector(".forecast-graph");
+    svg.replaceChildren();
+    svg.toggleAttribute("hidden", points.length < 2);
+    this._text(
+      ".graph-empty",
+      points.length < 2
+        ? "Diagrammet visas när två olika daterade leveransprognoser har registrerats."
+        : "",
+    );
+    if (points.length >= 2) {
+      const shown = points.slice(-10);
+      const values = shown.map((point) => point.forecast.getTime());
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const svgElement = (name, attributes, text) => {
+        const element = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          name,
+        );
+        for (const [key, value] of Object.entries(attributes))
+          element.setAttribute(key, String(value));
+        if (text !== undefined) element.textContent = text;
+        svg.append(element);
+        return element;
+      };
+      svgElement("line", { x1: 12, y1: 26, x2: 288, y2: 26 });
+      svgElement("line", { x1: 12, y1: 88, x2: 288, y2: 88 });
+      const coords = shown.map((point, index) => ({
+        x: 16 + (index * 268) / (shown.length - 1),
+        y: 88 - ((point.forecast.getTime() - min) * 62) / (max - min),
+      }));
+      svgElement("polyline", {
+        points: coords.map(({ x, y }) => `${x},${y}`).join(" "),
+      });
+      for (const { x, y } of coords)
+        svgElement("circle", { cx: x, cy: y, r: 4 });
+      svgElement(
+        "text",
+        { x: 12, y: 16 },
+        `Senare: ${formatDay(new Date(max))}`,
+      );
+      svgElement(
+        "text",
+        { x: 12, y: 105 },
+        `Tidigare: ${formatDay(new Date(min))}`,
+      );
+      svgElement("text", { x: 12, y: 125 }, formatDate(shown[0].at));
+      svgElement(
+        "text",
+        { x: 288, y: 125, "text-anchor": "end" },
+        formatDate(shown[shown.length - 1].at),
+      );
+    }
+
+    const categories = [
+      ["Prognos", ["forecast", "forecast_date"]],
+      ["Status", ["status"]],
+      ["Order", ["order", "order_description"]],
+      ["Bil", ["model", "specification"]],
+      ["Bilder", ["media"]],
+    ];
+    const bars = this.shadowRoot.querySelector(".activity-bars");
+    bars.replaceChildren();
+    const counts = categories.map(
+      ([, fields]) =>
+        events.filter((event) =>
+          event.changes.some((change) => fields.includes(change.field)),
+        ).length,
+    );
+    const peak = Math.max(...counts, 1);
+    categories.forEach(([label], index) => {
+      const row = document.createElement("div");
+      row.className = "activity-row";
+      const name = document.createElement("span");
+      name.textContent = label;
+      const track = document.createElement("div");
+      track.className = "activity-track";
+      const fill = document.createElement("div");
+      fill.className = "activity-fill";
+      fill.style.width = `${(counts[index] / peak) * 100}%`;
+      track.append(fill);
+      const count = document.createElement("span");
+      count.className = "activity-count";
+      count.textContent = String(counts[index]);
+      row.append(name, track, count);
+      bars.append(row);
+    });
+    this._text(
+      ".activity-caption",
+      `Antal händelser per kategori i de ${history.length} sparade historikpunkterna. En händelse kan ingå i flera kategorier.`,
+    );
+    const list = this.shadowRoot.querySelector(".history-list");
+    list.replaceChildren();
+    const labels = {
+      status: "Status",
+      forecast: "Leveransprognos",
+      forecast_date: "Beräknad veckostart",
+      order: "Orderändringar",
+      order_description: "Orderinformation",
+      specification: "Bilkonfiguration",
+      model: "Bilmodell",
+      media: "Bilder och länkar",
+    };
+    for (const event of events.slice(-5).reverse()) {
+      const li = document.createElement("li");
+      const time = document.createElement("time");
+      time.dateTime = event.at;
+      time.textContent = formatDate(event.at);
+      li.append(time);
+      for (const change of event.changes) {
+        if (!labels[change.field]) continue;
+        const heading = document.createElement("strong");
+        heading.textContent = labels[change.field];
+        const before = document.createElement("p");
+        before.className = "before";
+        before.textContent = `Tidigare: ${change.before || "Saknas"}`;
+        const after = document.createElement("p");
+        after.textContent = `Nu: ${change.after || "Saknas"}`;
+        li.append(heading, before, after);
+      }
+      list.append(li);
+    }
+    this._text(
+      ".history-caption",
+      events.length
+        ? `Senaste ${Math.min(events.length, 5)} av ${events.length} sparade händelser.`
+        : "",
+    );
+    this._text(
+      ".list-empty",
+      !startedText
+        ? "Ingen historik är tillgänglig ännu."
+        : events.length
+          ? ""
+          : "Inga ändringar har upptäckts sedan registreringen började.",
+    );
+  }
+
   _render(force = true) {
     if (!this._config || !this._hass) return;
     const entities = resolveEntities(this._hass, this._config);
@@ -460,7 +742,10 @@ class VolvoDeliveryCard extends HTMLElement {
       this._entities?.status_entity.entity !== entities.status_entity.entity;
     this._entities = entities;
     const status = entities.status_entity.entity;
-    if (force || vehicleChanged) this._vehicle(status);
+    if (force || vehicleChanged) {
+      this._vehicle(status);
+      this._history(status);
+    }
     const estimate = entities.delivery_entity.entity;
     const available = isAvailable(status) && isAvailable(estimate);
     const forecast = available ? forecastView(estimate, day) : null;

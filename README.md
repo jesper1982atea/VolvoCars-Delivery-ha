@@ -19,7 +19,7 @@ Välj den senaste publicerade versionen. Kortet uppdateras tillsammans med
 integrationen; efter en uppdatering kan webbläsaren eller mobilappen behöva
 laddas om för att läsa det nya kortet.
 Om kortet tidigare registrerades manuellt som en instrumentpanelsresurs,
-uppdatera den befintliga URL:en till `/volvo_delivery/volvo-delivery-card.js?v=0.3.1`.
+uppdatera den befintliga URL:en till `/volvo_delivery/volvo-delivery-card.js?v=0.4.0`.
 
 Öppna **Inställningar → Enheter och tjänster → Lägg till integration → Volvo
 Delivery**. Ange ditt ordernummer (sju eller åtta siffror) och Authorization-värdet
@@ -32,6 +32,23 @@ nedräkning, leveransintervall, statussteg, orderinformation och uppdateringskna
 Det fungerar i webbläsaren och i **Home Assistant Companion-appen** på iOS/Android.
 Det är ett dashboardkort i Home Assistant, inte en separat mobilapp eller ett
 Home Assistant-tillägg.
+
+Kortets avsnitt **Ändringar & prognos** visar antal upptäckta händelser, senaste
+jämförbara prognosskiftet, ett diagram över leveransveckans start samt
+före- och eftervärden. Staplarna visar antal händelser per kategori; en händelse
+kan räknas i flera kategorier. Enbart nedräkningen i Volvos rubrik räknas inte
+som en ny leveransprognos om leveransveckan är oförändrad.
+
+Historiken börjar samlas från den första lyckade kontrollen efter installation
+eller uppgradering. Den tidigare snapshoten används som baslinje vid
+uppgradering; äldre ändringar kan inte återskapas. Den totala räknaren sparas
+lokalt, medan högst 10 historikpunkter och de senaste 5 händelserna visas.
+Staplar och diagram bygger bara på dessa sparade punkter, så ett äldre
+prognosskifte kan falla bort. Färre än 10 punkter sparas om historiken annars
+blir för stor. Ändringar av Volvos bilder och länkar räknas också; långa värden
+kortas i historiken. Diagrammet
+kräver minst två olika prognosdatum och visar uppskattade veckostarter, inte
+bekräftade leveransdatum. Inga nya anrop till Volvo görs för graferna.
 
 Kortets JavaScript registreras automatiskt när integrationen laddas. Efter
 installationen: ladda om webbläsaren eller stäng och öppna Home Assistant-appen.

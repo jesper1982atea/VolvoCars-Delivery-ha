@@ -56,6 +56,14 @@
           "sensor.demo_status": state("status", "Din bil är orderlagd.", {
             model: "EX60",
             specification: "EX60 · Din nästa helelektriska resa",
+            history_started: new Date(Date.now() - 21 * 86400000).toISOString(),
+            history_total: 3,
+            change_history: [
+              { at: new Date(Date.now() - 21 * 86400000).toISOString(), baseline: true, forecast_start: dateText(new Date(start.getTime() - 14 * 86400000)), changes: [] },
+              { at: new Date(Date.now() - 14 * 86400000).toISOString(), baseline: false, forecast_start: dateText(new Date(start.getTime() - 7 * 86400000)), changes: [{ field: "forecast", before: "Leverans två veckor tidigare", after: "Leverans en vecka tidigare" }] },
+              { at: new Date(Date.now() - 7 * 86400000).toISOString(), baseline: false, forecast_start: dateText(start), changes: [{ field: "forecast", before: "Leverans en vecka tidigare", after: `Leverans beräknad till v. ${week}` }] },
+              { at: new Date(Date.now() - 2 * 86400000).toISOString(), baseline: false, forecast_start: dateText(start), changes: [{ field: "status", before: "Order mottagen", after: "Din bil är orderlagd." }] }
+            ],
           }),
           "sensor.demo_estimate": state("delivery_estimate", `Leverans beräknad till v. ${week}`, {
             estimated_start: dateText(start), estimated_end: dateText(end),

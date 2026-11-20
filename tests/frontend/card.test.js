@@ -460,3 +460,127 @@ test("unavailable status does not show stale media or model links", (t) => {
     true,
   );
 });
+
+function withHistory() {
+  const data = hass();
+  Object.assign(data.states["sensor.my_renamed_status"].attributes, {
+    history_started: "2026-11-09T12:00:00Z",
+    history_total: 2,
+    change_history: [
+      {
+        at: "2026-11-09T12:00:00Z",
+        baseline: true,
+        forecast_start: "2027-02-01",
+        changes: [],
+      },
+      {
+        at: "2026-11-10T12:00:00Z",
+        baseline: false,
+        forecast_start: "2027-02-08",
+        changes: [{ field: "forecast", before: "Vecka 5", after: "Vecka 6" }],
+      },
+      {
+        at: "2026-11-11T12:00:00Z",
+        baseline: false,
+        forecast_start: "2027-02-08",
+        changes: [{ field: "status", before: "Beställd", after: "På väg" }],
+      },
+    ],
+  });
+  return data;
+}
+
+test("shows real recorded changes, later forecast and grouped event bars", (t) => {
+  const element = card(t, undefined, withHistory());
+  assert.equal(text(element, ".insight-total"), "2");
+  assert.equal(text(element, ".insight-shift"), "+7 d");
+  assert.match(text(element, ".insight-shift-note"), /senare/);
+  assert.match(
+    text(element, ".insights-caption"),
+    /Äldre ändringar finns inte med/,
+  );
+  assert.equal(
+    element.shadowRoot.querySelector(".forecast-graph").hasAttribute("hidden"),
+    false,
+  );
+  assert.equal(
+    element.shadowRoot.querySelectorAll(".forecast-graph circle").length,
+    2,
+  );
+  assert.equal(
+    element.shadowRoot.querySelectorAll(".history-list li").length,
+    2,
+  );
+  assert.match(text(element, ".history-list li"), /Tidigare: Beställd/);
+  assert.match(text(element, ".history-list li"), /Nu: På väg/);
+  assert.deepEqual(
+    [...element.shadowRoot.querySelectorAll(".activity-count")].map(
+      (node) => node.textContent,
+    ),
+    ["1", "1", "0", "0", "0"],
+  );
+});
+
+test("earlier forecast displays a negative shift without inventing a delivery date", (t) => {
+  const data = withHistory();
+  data.states[
+    "sensor.my_renamed_status"
+  ].attributes.change_history[1].forecast_start = "2027-01-25";
+  data.states[
+    "sensor.my_renamed_status"
+  ].attributes.change_history[2].forecast_start = "2027-01-25";
+  const element = card(t, undefined, data);
+  assert.equal(text(element, ".insight-shift"), "−7 d");
+  assert.match(text(element, ".insight-shift-note"), /tidigare/);
+});
+
+test("missing and one-point history are honest and show no fabricated chart", (t) => {
+  const data = hass();
+  const element = card(t, undefined, data);
+  assert.equal(text(element, ".insight-total"), "–");
+  assert.match(
+    text(element, ".insights-caption"),
+    /Äldre ändringar finns inte med/,
+  );
+  assert.equal(
+    element.shadowRoot.querySelector(".forecast-graph").hasAttribute("hidden"),
+    true,
+  );
+  Object.assign(data.states["sensor.my_renamed_status"].attributes, {
+    history_started: "2026-11-09T12:00:00Z",
+    history_total: 0,
+    change_history: [
+      {
+        at: "2026-11-09T12:00:00Z",
+        baseline: true,
+        forecast_start: "2027-02-01",
+        changes: [],
+      },
+    ],
+  });
+  element.hass = {
+    ...data,
+    states: {
+      ...data.states,
+      "sensor.my_renamed_status": {
+        ...data.states["sensor.my_renamed_status"],
+      },
+    },
+  };
+  assert.equal(text(element, ".insight-total"), "0");
+  assert.match(text(element, ".list-empty"), /Inga ändringar/);
+  assert.equal(
+    element.shadowRoot.querySelector(".forecast-graph").hasAttribute("hidden"),
+    true,
+  );
+});
+
+test("history text is rendered safely as text", (t) => {
+  const data = withHistory();
+  data.states[
+    "sensor.my_renamed_status"
+  ].attributes.change_history[2].changes[0].after = "<img src=x>";
+  const element = card(t, undefined, data);
+  assert.match(text(element, ".history-list"), /<img src=x>/);
+  assert.equal(element.shadowRoot.querySelector(".history-list img"), null);
+});

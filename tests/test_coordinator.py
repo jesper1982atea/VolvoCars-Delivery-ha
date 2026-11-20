@@ -1,5 +1,6 @@
 """Test daily polling and persistent change detection with real HA helpers."""
 
+import json
 from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
@@ -7,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -15,7 +17,11 @@ from custom_components.volvo_delivery.api import (
     VolvoDeliveryError,
     parse_delivery,
 )
-from custom_components.volvo_delivery.coordinator import VolvoDeliveryCoordinator
+from custom_components.volvo_delivery.const import DOMAIN
+from custom_components.volvo_delivery.coordinator import (
+    HISTORY_BYTES_LIMIT,
+    VolvoDeliveryCoordinator,
+)
 
 
 def make_coordinator(hass, data):
@@ -192,3 +198,151 @@ async def test_updated_estimate_gets_new_reference(hass, payload):
         await coordinator._async_update_data()
     assert coordinator.forecast.week == 6
     assert coordinator.forecast.start.isoformat() == "2027-02-08"
+
+
+async def test_history_baseline_changes_and_restart(hass, payload):
+    original = replace(
+        parse_delivery(payload, "1234567"),
+        delivery_estimate="Leverans v. 5 2027",
+        delivery_estimate_title="12 veckor kvar",
+    )
+    coordinator = make_coordinator(hass, original)
+    await coordinator._async_update_data()
+    assert coordinator.history_total == 0
+    assert coordinator.history[0]["baseline"]
+    assert coordinator.history[0]["forecast_start"] == "2027-02-01"
+    await coordinator._async_update_data()
+    assert len(coordinator.history) == 1
+    coordinator.client.async_get_delivery.return_value = replace(
+        original, status="På väg", delivery_estimate="Leverans v. 6 2027"
+    )
+    await coordinator._async_update_data()
+    assert coordinator.history_total == 1
+    event = coordinator.history[-1]
+    assert event["forecast_start"] == "2027-02-08"
+    assert {item["field"] for item in event["changes"]} == {"status", "forecast"}
+    assert next(item for item in event["changes"] if item["field"] == "status") == {
+        "field": "status",
+        "before": "Order placed",
+        "after": "På väg",
+    }
+    restarted = make_coordinator(
+        hass, coordinator.client.async_get_delivery.return_value
+    )
+    await restarted.async_load()
+    await restarted._async_update_data()
+    assert restarted.history == coordinator.history
+    assert restarted.history_total == 1
+
+
+async def test_upgrade_starts_history_without_resetting_last_changed(hass, payload):
+    data = parse_delivery(payload, "1234567")
+    previous_time = "2026-11-09T12:00:00+00:00"
+    await Store(hass, 1, f"{DOMAIN}.fictional-entry").async_save(
+        {
+            "snapshot": data.as_dict(),
+            "previous_status": "Earlier",
+            "last_changed": previous_time,
+            "estimate_reference": previous_time,
+        }
+    )
+    coordinator = make_coordinator(hass, data)
+    await coordinator.async_load()
+    await coordinator._async_update_data()
+    assert coordinator.last_changed == dt_util.parse_datetime(previous_time)
+    assert coordinator.previous_status == "Earlier"
+    assert coordinator.history_total == 0
+    assert len(coordinator.history) == 1
+    assert coordinator.history_started > coordinator.last_changed
+
+
+async def test_upgrade_records_real_changes_seen_while_stopped(hass, payload):
+    old = parse_delivery(payload, "1234567")
+    await Store(hass, 1, f"{DOMAIN}.fictional-entry").async_save(
+        {
+            "snapshot": old.as_dict(),
+            "previous_status": None,
+            "last_changed": "2026-11-09T12:00:00+00:00",
+        }
+    )
+    coordinator = make_coordinator(hass, replace(old, status="På väg"))
+    await coordinator.async_load()
+    await coordinator._async_update_data()
+    assert coordinator.history_total == 1
+    assert coordinator.history[0]["baseline"]
+    assert coordinator.history[-1]["changes"][0]["before"] == old.status
+
+
+async def test_relative_week_count_does_not_count_as_forecast_change(hass, payload):
+    original = replace(
+        parse_delivery(payload, "1234567"),
+        delivery_estimate="Leverans v. 5 2027",
+        delivery_estimate_title="12 veckor kvar",
+    )
+    coordinator = make_coordinator(hass, original)
+    await coordinator._async_update_data()
+    coordinator.client.async_get_delivery.return_value = replace(
+        original, delivery_estimate_title="11 veckor kvar"
+    )
+    await coordinator._async_update_data()
+    assert coordinator.history_total == 0
+    assert len(coordinator.history) == 1
+
+
+async def test_history_bounded_without_losing_total(hass, payload):
+    data = parse_delivery(payload, "1234567")
+    coordinator = make_coordinator(hass, data)
+    await coordinator._async_update_data()
+    for index in range(12):
+        coordinator.client.async_get_delivery.return_value = replace(
+            data, status=f"Status {index} " + "x" * 150
+        )
+        await coordinator._async_update_data()
+    assert coordinator.history_total == 12
+    assert len(coordinator.history) == 10
+    assert len(coordinator.history[-1]["changes"][0]["after"]) == 100
+    assert coordinator.history[-1]["changes"][0]["after"].endswith("…")
+
+
+async def test_failed_fetch_does_not_change_history(hass, payload):
+    coordinator = make_coordinator(hass, parse_delivery(payload, "1234567"))
+    await coordinator._async_update_data()
+    before = list(coordinator.history)
+    coordinator.client.async_get_delivery.side_effect = VolvoDeliveryError("offline")
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+    assert coordinator.history == before
+    assert coordinator.history_total == 0
+
+
+async def test_media_changes_are_counted_without_storing_urls(hass, payload):
+    data = parse_delivery(payload, "1234567")
+    coordinator = make_coordinator(hass, data)
+    await coordinator._async_update_data()
+    coordinator.client.async_get_delivery.return_value = replace(
+        data, image_url="https://wizz.volvocars.com/images/new-example.png"
+    )
+    await coordinator._async_update_data()
+    assert coordinator.history_total == 1
+    assert coordinator.history[-1]["changes"][0]["field"] == "media"
+    assert "wizz.volvocars.com" not in str(coordinator.history)
+
+
+async def test_large_unicode_history_is_bounded_for_recorder(hass, payload):
+    data = parse_delivery(payload, "1234567")
+    coordinator = make_coordinator(hass, data)
+    await coordinator._async_update_data()
+    for index in range(12):
+        long_text = ("😀" * 150) + str(index)
+        coordinator.client.async_get_delivery.return_value = replace(
+            data,
+            status=long_text,
+            order_changes=long_text,
+            order_changes_description=long_text,
+            specification=long_text,
+        )
+        await coordinator._async_update_data()
+    assert coordinator.history_total == 12
+    assert (
+        len(json.dumps(coordinator.history, ensure_ascii=True)) <= HISTORY_BYTES_LIMIT
+    )

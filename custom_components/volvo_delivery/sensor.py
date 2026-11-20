@@ -150,6 +150,13 @@ class VolvoDeliverySensor(CoordinatorEntity[VolvoDeliveryCoordinator], SensorEnt
                         "interior_image_url": data.interior_image_url,
                         "model_url": data.model_url,
                         "manual_url": data.manual_url,
+                        "change_history": self.coordinator.history,
+                        "history_started": (
+                            self.coordinator.history_started.isoformat()
+                            if self.coordinator.history_started
+                            else None
+                        ),
+                        "history_total": self.coordinator.history_total,
                     }
                 )
             case "delivery_estimate":

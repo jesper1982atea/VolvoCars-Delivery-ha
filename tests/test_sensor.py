@@ -16,6 +16,9 @@ def make_sensor(payload, key):
         last_changed=None,
         last_checked=None,
         forecast=None,
+        history=[],
+        history_started=None,
+        history_total=0,
     )
     entry = SimpleNamespace(
         runtime_data=coordinator,
